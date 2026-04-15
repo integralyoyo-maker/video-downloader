@@ -526,15 +526,10 @@ async function fetchVideo() {
   else if (format !== 'auto') { requestBody.videoCodec = format === 'webm' ? 'vp9' : 'h264'; }
 
   const DIRECT_APIS = [
-    "https://cobalt.bookish-shame.org", // 目前針對 YouTube 最強的修復節點
-    "https://api.cobalt.red",           // 偶爾會恢復正常
-    "https://cobalt.sh"
-    "https://api.cobalt.tools",           // 官方節點 (嘗試優先)
-    "https://cobalt.api.gh0st.cc",        // 新增：目前非常穩定的節點
-    "https://cobalt.conduit.ac",          // 新增：高可用性節點
-    "https://cobalt.hyper-sh.dev",        // 新增：開發者常用節點
-    "https://api.kocieric.info"           // 新增：備用節點
-  ];
+  "https://cobalt.bookish-shame.org", // 目前針對 YouTube 最強的修復節點
+  "https://api.cobalt.red",           // 偶爾會恢復正常
+  "https://cobalt.sh"
+];
 
   let success = false;
 
