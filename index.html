@@ -525,12 +525,12 @@ async function fetchVideo() {
   if (format === 'audio') { requestBody.downloadMode = 'audio'; }
   else if (format !== 'auto') { requestBody.videoCodec = format === 'webm' ? 'vp9' : 'h264'; }
 
-  // 這一批是「允許網頁直接連線」的伺服器清單
   const DIRECT_APIS = [
-    "https://cobalt.sm64.org",
-    "https://api.cobalt.red",
-    "https://cobalt.v0id.it",
-    "https://cobalt.sh"
+    "https://api.cobalt.tools",           // 官方節點 (嘗試優先)
+    "https://cobalt.api.gh0st.cc",        // 新增：目前非常穩定的節點
+    "https://cobalt.conduit.ac",          // 新增：高可用性節點
+    "https://cobalt.hyper-sh.dev",        // 新增：開發者常用節點
+    "https://api.kocieric.info"           // 新增：備用節點
   ];
 
   let success = false;
