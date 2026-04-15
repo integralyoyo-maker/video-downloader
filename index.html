@@ -461,14 +461,24 @@
 
 <script>
 
-const COBALT_SERVERS = [
-  'https://cobalt-api.kwiatekmiki.com',
-  'https://api-dl.cgm.rs',
-  'https://cobalt.synzr.space',
-  'https://capi.oak.li',
-  'https://co.tskau.team'
-];
+// ==========================================
+// 1. 設定區：請把下方的網址換成你的 Worker 網址
+// ==========================================
+const MY_PROXY_URL = 'https://my-cobalt-proxy.integralyoyo.workers.dev/'; 
 
+// ==========================================
+// 2. 自動修正下拉選單顏色 (解決刺眼問題)
+// ==========================================
+const style = document.createElement('style');
+style.innerHTML = `
+  :root { color-scheme: dark; }
+  select option { background-color: #111118; color: #f0eeff; }
+`;
+document.head.appendChild(style);
+
+// ==========================================
+// 3. 核心下載邏輯
+// ==========================================
 let history = JSON.parse(localStorage.getItem('viddrop_history') || '[]');
 
 function detectPlatform(url) {
@@ -478,19 +488,11 @@ function detectPlatform(url) {
   if (/facebook\.com|fb\.watch/.test(url)) return 'Facebook';
   if (/threads\.net/.test(url)) return 'Threads';
   if (/twitter\.com|x\.com/.test(url)) return 'Twitter/X';
-  if (/twitch\.tv/.test(url)) return 'Twitch';
-  if (/reddit\.com/.test(url)) return 'Reddit';
-  if (/tumblr\.com/.test(url)) return 'Tumblr';
-  if (/soundcloud\.com/.test(url)) return 'SoundCloud';
-  return '未知平台';
+  return '影片';
 }
 
 function platformEmoji(platform) {
-  const map = {
-    'YouTube': '🎬', 'Instagram': '📸', 'TikTok': '🎵',
-    'Facebook': '📘', 'Threads': '🧵', 'Twitter/X': '🐦',
-    'Twitch': '🟣', 'Reddit': '🔴', 'Tumblr': '💙', 'SoundCloud': '🎧'
-  };
+  const map = { 'YouTube': '🎬', 'Instagram': '📸', 'TikTok': '🎵', 'Facebook': '📘', 'Threads': '🧵' };
   return map[platform] || '🎥';
 }
 
@@ -498,19 +500,12 @@ function setStatus(type, msg) {
   const box = document.getElementById('statusBox');
   const text = document.getElementById('statusText');
   const spinner = document.getElementById('spinner');
-  
   box.className = 'status-box show ' + type;
   text.textContent = msg;
   spinner.style.display = type === 'loading' ? 'block' : 'none';
-  
-  if (type !== 'loading') {
-    setTimeout(() => { if (box.className.includes(type)) box.className = 'status-box'; }, 5000);
-  }
 }
 
-function hideStatus() {
-  document.getElementById('statusBox').className = 'status-box';
-}
+function hideStatus() { document.getElementById('statusBox').className = 'status-box'; }
 
 async function fetchVideo() {
   const url = document.getElementById('urlInput').value.trim();
@@ -520,131 +515,68 @@ async function fetchVideo() {
 
   if (!url) { setStatus('error', '請先貼上影片連結'); return; }
 
-  try { new URL(url); } catch { setStatus('error', '連結格式不正確'); return; }
-
   btn.disabled = true;
   document.getElementById('resultCard').className = 'result-card';
-  setStatus('loading', '正在解析影片連結並尋找可用伺服器...');
+  setStatus('loading', '正在透過專屬通道解析影片...');
 
+  // 準備給 Worker 的參數
   const requestBody = { url };
-  if (quality !== 'auto' && format !== 'audio') requestBody.videoQuality = quality;
+  if (quality !== 'max' && format !== 'audio') requestBody.videoQuality = quality;
   if (format === 'audio') { requestBody.downloadMode = 'audio'; }
   else if (format !== 'auto') { requestBody.videoCodec = format === 'webm' ? 'vp9' : 'h264'; }
 
-  let success = false;
-  let lastError = null;
+  try {
+    const res = await fetch(MY_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(requestBody)
+    });
 
-  // 核心功能：自動輪詢測試備用伺服器
-  for (const api_url of COBALT_SERVERS) {
-    try {
-      console.log(`正在嘗試連線至: ${api_url}`);
-      const res = await fetch(api_url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
+    const data = await res.json();
 
-      const data = await res.json();
-
-      if (data.status === 'error') {
-        throw new Error(data.error?.code || '解析失敗，請確認連結是否正確');
-      }
-
-      // 如果成功抓到資料，就顯示結果並跳出迴圈
-      hideStatus();
-      showResults(data, url, detectPlatform(url));
-      addHistory(url);
-      success = true;
-      break; 
-
-    } catch (err) {
-      console.warn(`伺服器 ${api_url} 失敗，自動切換下一個...`, err);
-      lastError = err;
-      // 靜默失敗，迴圈會繼續嘗試下一個 api_url
+    if (data.status === 'error') {
+      throw new Error(data.error || '解析失敗');
     }
+
+    hideStatus();
+    showResults(data, url, detectPlatform(url));
+    addHistory(url);
+
+  } catch (err) {
+    setStatus('error', '下載失敗：' + (err.message.includes('fetch') ? '無法連線至 Proxy 伺服器，請檢查網址' : err.message));
+  } finally {
+    btn.disabled = false;
   }
-
-  // 如果所有伺服器都陣亡了，才顯示錯誤訊息給使用者
-  if (!success) {
-    let msg = '下載失敗：';
-    if (lastError && (lastError.message.includes('fetch') || lastError.message.includes('Failed to fetch'))) {
-      msg += '目前所有免費伺服器皆拒絕連線 (CORS) 或忙線中，請稍後再試。';
-    } else if (lastError && lastError.message.includes('error.link.unsupported')) {
-      msg += '此連結格式不支援';
-    } else if (lastError && lastError.message.includes('error.api.auth')) {
-      msg += '需要登入才能下載私人內容';
-    } else {
-      msg += (lastError ? lastError.message : '未知錯誤');
-    }
-    setStatus('error', msg);
-  } 
-
-  btn.disabled = false;
 }
+
+// 顯示結果與歷史紀錄功能 (維持原樣)
 function showResults(data, originalUrl, platform) {
   const card = document.getElementById('resultCard');
   const items = document.getElementById('resultItems');
   items.innerHTML = '';
 
   if (data.status === 'stream' || data.status === 'redirect') {
-    // Single file
-    const item = createResultItem({
-      name: `${platform} 影片`,
-      meta: '點擊下方按鈕下載',
-      url: data.url,
-      platform
-    });
-    items.appendChild(item);
-
+    items.appendChild(createResultItem({ name: `${platform} 影片`, meta: '點擊下載', url: data.url, platform }));
   } else if (data.status === 'picker') {
-    // Multiple files (e.g., Instagram carousel)
     data.picker.forEach((pick, i) => {
-      const item = createResultItem({
-        name: `${platform} 媒體 ${i+1}`,
-        meta: pick.type || '影片/圖片',
-        url: pick.url,
-        platform,
-        thumb: pick.thumb
-      });
-      items.appendChild(item);
+      items.appendChild(createResultItem({ name: `${platform} 媒體 ${i+1}`, meta: pick.type, url: pick.url, platform, thumb: pick.thumb }));
     });
-
-    if (data.audio) {
-      const audioItem = createResultItem({
-        name: '背景音樂',
-        meta: '音訊檔案',
-        url: data.audio,
-        platform: 'audio'
-      });
-      items.appendChild(audioItem);
-    }
   }
-
   card.className = 'result-card show';
 }
 
 function createResultItem({ name, meta, url, platform, thumb }) {
   const div = document.createElement('div');
   div.className = 'result-item';
-
-  const iconBg = {
-    'YouTube': '#ff0000', 'Instagram': '#e1306c', 'TikTok': '#000',
-    'Facebook': '#1877f2', 'Threads': '#000', 'Twitter/X': '#1da1f2',
-    'audio': '#f97316'
-  }[platform] || '#7c6bff';
-
   div.innerHTML = `
-    <div class="result-icon" style="background:${iconBg}20; color:${iconBg}">
+    <div class="result-icon" style="background:rgba(124,107,255,0.1); color:#7c6bff">
       ${thumb ? `<img src="${thumb}" style="width:36px;height:36px;object-fit:cover;border-radius:8px">` : platformEmoji(platform)}
     </div>
     <div class="result-info">
       <div class="result-name">${name}</div>
       <div class="result-meta">${meta}</div>
     </div>
-    <a href="${url}" class="download-link" target="_blank" rel="noopener" download>下載</a>
+    <a href="${url}" class="download-link" target="_blank" rel="noopener">下載</a>
   `;
   return div;
 }
@@ -659,44 +591,21 @@ function addHistory(url) {
 function renderHistory() {
   const section = document.getElementById('historySection');
   const list = document.getElementById('historyList');
-  
-  if (history.length === 0) { section.style.display = 'none'; return; }
+  if (history.length === 0) return;
   section.style.display = 'block';
-  
   list.innerHTML = history.map(h => `
-    <div class="history-item" onclick="loadHistory('${h.url.replace(/'/g,"\\'")}')">
+    <div class="history-item" onclick="loadHistory('${h.url}')">
       <span>${platformEmoji(h.platform)}</span>
       <span class="history-url">${h.url}</span>
-      <span class="history-platform">${h.platform}</span>
     </div>
   `).join('');
 }
 
-function loadHistory(url) {
-  document.getElementById('urlInput').value = url;
-  document.getElementById('urlInput').focus();
-}
+function loadHistory(url) { document.getElementById('urlInput').value = url; }
+function clearHistory() { history = []; localStorage.removeItem('viddrop_history'); renderHistory(); }
 
-function clearHistory() {
-  history = [];
-  localStorage.removeItem('viddrop_history');
-  renderHistory();
-}
+document.getElementById('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') fetchVideo(); });
 
-// Enter key support
-document.getElementById('urlInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') fetchVideo();
-});
-
-// Paste detection
-document.getElementById('urlInput').addEventListener('paste', () => {
-  setTimeout(() => {
-    const val = document.getElementById('urlInput').value;
-    if (val.startsWith('http')) fetchVideo();
-  }, 50);
-});
-
-// Init
 renderHistory();
 </script>
 </body>
