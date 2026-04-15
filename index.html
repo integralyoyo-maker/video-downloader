@@ -16,6 +16,7 @@
     --muted: #6b6880;
     --success: #4dffa6;
     --error: #ff6b6b;
+    color-scheme: dark;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -203,6 +204,10 @@
     cursor: pointer;
     appearance: none;
     transition: border-color 0.2s;
+  }
+    select option {
+    background-color: var(--surface);
+    color: var(--text);
   }
   select:focus { border-color: var(--accent); }
 
@@ -455,7 +460,7 @@
 </div>
 
 <script>
-const COBALT_API = 'https://api.cobalt.tools';
+const COBALT_API = 'https://cobalt.api.wuk.sh';
 
 let history = JSON.parse(localStorage.getItem('viddrop_history') || '[]');
 
