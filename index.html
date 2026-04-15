@@ -460,7 +460,14 @@
 </div>
 
 <script>
-const COBALT_API = 'https://cobalt.api.wuk.sh';
+
+const COBALT_SERVERS = [
+  'https://cobalt-api.kwiatekmiki.com',
+  'https://api-dl.cgm.rs',
+  'https://cobalt.synzr.space',
+  'https://capi.oak.li',
+  'https://co.tskau.team'
+];
 
 let history = JSON.parse(localStorage.getItem('viddrop_history') || '[]');
 
@@ -517,46 +524,66 @@ async function fetchVideo() {
 
   btn.disabled = true;
   document.getElementById('resultCard').className = 'result-card';
-  setStatus('loading', '正在解析影片連結...');
+  setStatus('loading', '正在解析影片連結並尋找可用伺服器...');
 
   const requestBody = { url };
-  
   if (quality !== 'auto' && format !== 'audio') requestBody.videoQuality = quality;
   if (format === 'audio') { requestBody.downloadMode = 'audio'; }
   else if (format !== 'auto') { requestBody.videoCodec = format === 'webm' ? 'vp9' : 'h264'; }
 
-  try {
-    const res = await fetch(COBALT_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
+  let success = false;
+  let lastError = null;
 
-    const data = await res.json();
+  // 核心功能：自動輪詢測試備用伺服器
+  for (const api_url of COBALT_SERVERS) {
+    try {
+      console.log(`正在嘗試連線至: ${api_url}`);
+      const res = await fetch(api_url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
 
-    if (data.status === 'error') {
-      throw new Error(data.error?.code || '解析失敗，請確認連結是否正確');
+      const data = await res.json();
+
+      if (data.status === 'error') {
+        throw new Error(data.error?.code || '解析失敗，請確認連結是否正確');
+      }
+
+      // 如果成功抓到資料，就顯示結果並跳出迴圈
+      hideStatus();
+      showResults(data, url, detectPlatform(url));
+      addHistory(url);
+      success = true;
+      break; 
+
+    } catch (err) {
+      console.warn(`伺服器 ${api_url} 失敗，自動切換下一個...`, err);
+      lastError = err;
+      // 靜默失敗，迴圈會繼續嘗試下一個 api_url
     }
-
-    hideStatus();
-    showResults(data, url, detectPlatform(url));
-    addHistory(url);
-
-  } catch (err) {
-    let msg = '下載失敗：';
-    if (err.message.includes('fetch')) msg += 'API 連線失敗，請確認網路或稍後再試';
-    else if (err.message.includes('error.link.unsupported')) msg += '此連結格式不支援';
-    else if (err.message.includes('error.api.auth')) msg += '需要登入才能下載私人內容';
-    else msg += err.message;
-    setStatus('error', msg);
-  } finally {
-    btn.disabled = false;
   }
-}
 
+  // 如果所有伺服器都陣亡了，才顯示錯誤訊息給使用者
+  if (!success) {
+    let msg = '下載失敗：';
+    if (lastError && (lastError.message.includes('fetch') || lastError.message.includes('Failed to fetch'))) {
+      msg += '目前所有免費伺服器皆拒絕連線 (CORS) 或忙線中，請稍後再試。';
+    } else if (lastError && lastError.message.includes('error.link.unsupported')) {
+      msg += '此連結格式不支援';
+    } else if (lastError && lastError.message.includes('error.api.auth')) {
+      msg += '需要登入才能下載私人內容';
+    } else {
+      msg += (lastError ? lastError.message : '未知錯誤');
+    }
+    setStatus('error', msg);
+  } 
+
+  btn.disabled = false;
+}
 function showResults(data, originalUrl, platform) {
   const card = document.getElementById('resultCard');
   const items = document.getElementById('resultItems');
