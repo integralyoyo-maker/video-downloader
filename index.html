@@ -519,7 +519,6 @@ async function fetchVideo() {
   document.getElementById('resultCard').className = 'result-card';
   setStatus('loading', '正在透過專屬通道解析影片...');
 
-  // 準備給 Worker 的參數
   const requestBody = { url };
   if (quality !== 'max' && format !== 'audio') requestBody.videoQuality = quality;
   if (format === 'audio') { requestBody.downloadMode = 'audio'; }
@@ -534,8 +533,15 @@ async function fetchVideo() {
 
     const data = await res.json();
 
+    // 關鍵修正：如果 API 回傳錯誤，拆解它的錯誤內容
     if (data.status === 'error') {
-      throw new Error(data.error || '解析失敗');
+      let errorMsg = '解析失敗';
+      if (typeof data.error === 'object' && data.error !== null) {
+        errorMsg = data.error.code || data.error.text || JSON.stringify(data.error);
+      } else if (typeof data.error === 'string') {
+        errorMsg = data.error;
+      }
+      throw new Error(errorMsg);
     }
 
     hideStatus();
@@ -543,12 +549,14 @@ async function fetchVideo() {
     addHistory(url);
 
   } catch (err) {
-    setStatus('error', '下載失敗：' + (err.message.includes('fetch') ? '無法連線至 Proxy 伺服器，請檢查網址' : err.message));
+    // 這裡也修正，確保顯示的是字串而不是 [object Object]
+    let finalMsg = err.message;
+    if (finalMsg.includes('Failed to fetch')) finalMsg = '無法連線至 Proxy 伺服器，請檢查網址';
+    setStatus('error', '下載失敗：' + finalMsg);
   } finally {
     btn.disabled = false;
   }
 }
-
 // 顯示結果與歷史紀錄功能 (維持原樣)
 function showResults(data, originalUrl, platform) {
   const card = document.getElementById('resultCard');
