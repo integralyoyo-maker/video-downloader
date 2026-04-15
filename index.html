@@ -517,45 +517,77 @@ async function fetchVideo() {
 
   btn.disabled = true;
   document.getElementById('resultCard').className = 'result-card';
-  setStatus('loading', '正在透過專屬通道解析影片...');
+  setStatus('loading', '正在搜尋最快的下載通道...');
 
+  // 準備請求資料
   const requestBody = { url };
   if (quality !== 'max' && format !== 'audio') requestBody.videoQuality = quality;
   if (format === 'audio') { requestBody.downloadMode = 'audio'; }
   else if (format !== 'auto') { requestBody.videoCodec = format === 'webm' ? 'vp9' : 'h264'; }
 
-  try {
-    const res = await fetch(MY_PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody)
-    });
+  // 這一批是「允許網頁直接連線」的伺服器清單
+  const DIRECT_APIS = [
+    "https://cobalt.sm64.org",
+    "https://api.cobalt.red",
+    "https://cobalt.v0id.it",
+    "https://cobalt.sh"
+  ];
 
-    const data = await res.json();
+  let success = false;
 
-    // 關鍵修正：如果 API 回傳錯誤，拆解它的錯誤內容
-    if (data.status === 'error') {
-      let errorMsg = '解析失敗';
-      if (typeof data.error === 'object' && data.error !== null) {
-        errorMsg = data.error.code || data.error.text || JSON.stringify(data.error);
-      } else if (typeof data.error === 'string') {
-        errorMsg = data.error;
+  // 1. 先嘗試「直接連線」(繞過 Worker，避免被封 IP)
+  for (const api of DIRECT_APIS) {
+    try {
+      console.log(`嘗試直接連線至: ${api}`);
+      const res = await fetch(api, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(requestBody),
+        signal: AbortSignal.timeout(4000)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status !== 'error') {
+          handleSuccess(data, url);
+          success = true;
+          break;
+        }
       }
-      throw new Error(errorMsg);
+    } catch (e) {
+      console.warn(`${api} 直接連線失敗，準備嘗試下一個...`);
     }
-
-    hideStatus();
-    showResults(data, url, detectPlatform(url));
-    addHistory(url);
-
-  } catch (err) {
-    // 這裡也修正，確保顯示的是字串而不是 [object Object]
-    let finalMsg = err.message;
-    if (finalMsg.includes('Failed to fetch')) finalMsg = '無法連線至 Proxy 伺服器，請檢查網址';
-    setStatus('error', '下載失敗：' + finalMsg);
-  } finally {
-    btn.disabled = false;
   }
+
+  // 2. 如果直接連線都失敗，最後才動用你的 Worker (最後一道防線)
+  if (!success) {
+    setStatus('loading', '直接連線受阻，改由專屬轉運站嘗試...');
+    try {
+      const res = await fetch(MY_PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+      const data = await res.json();
+      if (data.status !== 'error') {
+        handleSuccess(data, url);
+        success = true;
+      } else {
+        throw new Error(data.error || '所有伺服器目前皆無法處理此請求');
+      }
+    } catch (err) {
+      setStatus('error', '下載失敗：' + err.message);
+    }
+  }
+
+  btn.disabled = false;
+}
+
+// 提取成功的處理邏輯
+function handleSuccess(data, url) {
+  hideStatus();
+  showResults(data, url, detectPlatform(url));
+  addHistory(url);
 }
 // 顯示結果與歷史紀錄功能 (維持原樣)
 function showResults(data, originalUrl, platform) {
