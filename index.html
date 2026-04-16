@@ -2,649 +2,461 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VidDrop — 影片下載器</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>VidDrop</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0a0a0f;
-    --surface: #111118;
-    --border: rgba(255,255,255,0.07);
-    --accent: #7c6bff;
-    --accent2: #ff6b9d;
-    --text: #f0eeff;
-    --muted: #6b6880;
-    --success: #4dffa6;
-    --error: #ff6b6b;
-    color-scheme: dark;
-  }
+:root {
+  --bg:#0a0a0f; --surface:#111118; --surface2:#17171f;
+  --border:rgba(255,255,255,0.07); --accent:#7c6bff; --accent2:#ff6b9d;
+  --text:#f0eeff; --muted:#6b6880; --success:#4dffa6; --error:#ff6b6b; --warn:#ffd166;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Noto Sans TC',sans-serif;
+  min-height:100vh; overflow-x:hidden;
+}
+.bg-grid{
+  position:fixed;inset:0;
+  background-image:linear-gradient(rgba(124,107,255,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(124,107,255,0.025) 1px,transparent 1px);
+  background-size:50px 50px; z-index:0; pointer-events:none;
+}
+.glow{
+  position:fixed;border-radius:50%;filter:blur(100px);opacity:0.1;z-index:0;pointer-events:none;
+  animation:drift 14s ease-in-out infinite alternate;
+}
+.glow.a{width:500px;height:500px;background:var(--accent);top:-150px;left:-100px}
+.glow.b{width:400px;height:400px;background:var(--accent2);bottom:-150px;right:-80px;animation-delay:-7s}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(30px,20px)}}
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+.wrap{
+  position:relative;z-index:1;
+  max-width:600px;margin:0 auto;
+  padding:48px 20px 80px;
+}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Noto Sans TC', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+.logo{
+  font-family:'Syne',sans-serif;font-weight:800;font-size:44px;
+  letter-spacing:-2px;text-align:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  animation:up 0.6s ease both;
+}
+.sub{text-align:center;font-size:13px;color:var(--muted);margin-top:8px;animation:up 0.6s 0.08s ease both}
+.badges{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:12px;animation:up 0.6s 0.14s ease both}
+.badge{padding:3px 10px;border-radius:100px;font-size:10px;border:1px solid var(--border);color:var(--muted)}
 
-  /* Animated background */
-  .bg-grid {
-    position: fixed;
-    inset: 0;
-    background-image: 
-      linear-gradient(rgba(124,107,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(124,107,255,0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
-    z-index: 0;
-  }
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:20px;padding:24px;margin-top:32px;
+  animation:up 0.6s 0.2s ease both;
+}
 
-  .bg-glow {
-    position: fixed;
-    width: 600px; height: 600px;
-    border-radius: 50%;
-    filter: blur(120px);
-    opacity: 0.12;
-    z-index: 0;
-    animation: drift 12s ease-in-out infinite alternate;
-  }
-  .bg-glow.g1 { background: var(--accent); top: -200px; left: -100px; }
-  .bg-glow.g2 { background: var(--accent2); bottom: -200px; right: -100px; animation-delay: -6s; }
+.input-wrap{display:flex;gap:10px}
+.url-input{
+  flex:1;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);
+  border-radius:12px;padding:14px 16px;color:var(--text);
+  font-family:'Noto Sans TC',sans-serif;font-size:14px;outline:none;
+  transition:border-color 0.2s,background 0.2s;
+  -webkit-appearance:none;
+}
+.url-input::placeholder{color:var(--muted)}
+.url-input:focus{border-color:var(--accent);background:rgba(124,107,255,0.05)}
 
-  @keyframes drift {
-    from { transform: translate(0,0) scale(1); }
-    to   { transform: translate(40px, 30px) scale(1.1); }
-  }
+.go-btn{
+  background:linear-gradient(135deg,var(--accent),#9b56ff);
+  border:none;border-radius:12px;padding:14px 22px;
+  color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;
+  cursor:pointer;white-space:nowrap;
+  box-shadow:0 0 24px rgba(124,107,255,0.3);
+  transition:opacity 0.15s,transform 0.15s;
+  -webkit-appearance:none;
+}
+.go-btn:active{opacity:0.8;transform:scale(0.97)}
+.go-btn:disabled{opacity:0.4;cursor:not-allowed}
 
-  .container {
-    position: relative;
-    z-index: 1;
-    max-width: 780px;
-    margin: 0 auto;
-    padding: 60px 24px 80px;
-  }
+.platform-pill{
+  display:none;align-items:center;gap:8px;
+  margin-top:14px;padding:10px 14px;
+  background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;
+}
+.platform-pill.show{display:flex}
+.p-emoji{font-size:18px}
+.p-name{font-size:13px;font-weight:500}
+.p-desc{font-size:11px;color:var(--muted);margin-top:1px}
 
-  /* Header */
-  .header {
-    text-align: center;
-    margin-bottom: 56px;
-    animation: fadeUp 0.8s ease both;
-  }
+.options{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.opt-group{flex:1;min-width:120px}
+.opt-label{font-size:10px;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:5px}
+select{
+  width:100%;background:rgba(255,255,255,0.04);border:1.5px solid var(--border);
+  border-radius:10px;padding:9px 12px;color:var(--text);
+  font-family:'Noto Sans TC',sans-serif;font-size:12px;outline:none;
+  appearance:none;cursor:pointer;transition:border-color 0.2s;
+}
+select:focus{border-color:var(--accent)}
 
-  .logo {
-    font-family: 'Syne', sans-serif;
-    font-weight: 800;
-    font-size: 48px;
-    letter-spacing: -2px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    line-height: 1;
-  }
+.progress-area{margin-top:20px;display:none;animation:up 0.3s ease both}
+.progress-area.show{display:block}
 
-  .tagline {
-    margin-top: 12px;
-    color: var(--muted);
-    font-size: 14px;
-    letter-spacing: 0.05em;
-    font-weight: 300;
-  }
+.stage-label{
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;color:var(--muted);margin-bottom:8px;
+}
+.stage-label .pct{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--accent)}
 
-  /* Platform badges */
-  .platforms {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
-    margin-top: 20px;
-    animation: fadeUp 0.8s 0.15s ease both;
-  }
+.bar-track{height:6px;background:rgba(255,255,255,0.06);border-radius:100px;overflow:hidden}
+.bar-fill{
+  height:100%;border-radius:100px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  width:0%;transition:width 0.4s ease;
+}
+.bar-fill.success{background:linear-gradient(90deg,#4dffa6,#00e5ff)}
+.bar-fill.error{background:linear-gradient(90deg,var(--error),#ff9b6b)}
 
-  .badge {
-    padding: 4px 12px;
-    border-radius: 100px;
-    font-size: 11px;
-    font-weight: 500;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    letter-spacing: 0.04em;
-  }
+.server-log{margin-top:12px;max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.log-item{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 10px;border-radius:8px;
+  background:rgba(255,255,255,0.025);
+  font-size:11px;color:var(--muted);
+  border:1px solid transparent;transition:all 0.25s;
+}
+.log-item.trying{border-color:rgba(124,107,255,0.3);color:var(--text);background:rgba(124,107,255,0.08)}
+.log-item.ok{border-color:rgba(77,255,166,0.25);color:var(--success);background:rgba(77,255,166,0.06)}
+.log-item.fail{border-color:rgba(255,107,107,0.2);color:var(--error);background:rgba(255,107,107,0.04)}
+.log-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.log-item.trying .log-dot{background:var(--accent);animation:pulse 1s infinite}
+.log-item.ok .log-dot{background:var(--success)}
+.log-item.fail .log-dot{background:var(--error)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 
-  /* Main card */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 32px;
-    margin-bottom: 24px;
-    animation: fadeUp 0.8s 0.25s ease both;
-    backdrop-filter: blur(10px);
-  }
+.result-area{margin-top:16px;display:none;animation:up 0.4s ease both}
+.result-area.show{display:block}
 
-  .input-row {
-    display: flex;
-    gap: 12px;
-    align-items: stretch;
-  }
+.result-box{
+  background:rgba(77,255,166,0.06);border:1px solid rgba(77,255,166,0.2);
+  border-radius:14px;padding:18px 20px;
+}
+.result-title{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--success);margin-bottom:12px}
+.dl-link{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;background:rgba(255,255,255,0.04);
+  border:1px solid rgba(77,255,166,0.15);border-radius:10px;
+  text-decoration:none;color:var(--text);
+  margin-bottom:8px;transition:background 0.2s;
+}
+.dl-link:last-child{margin-bottom:0}
+.dl-link:active{background:rgba(255,255,255,0.08)}
+.dl-icon{font-size:20px;flex-shrink:0}
+.dl-info{flex:1;min-width:0}
+.dl-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dl-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.dl-btn-pill{
+  background:linear-gradient(135deg,#4dffa6,#00e5ff);
+  color:#000;font-family:'Syne',sans-serif;font-weight:700;
+  font-size:11px;padding:7px 14px;border-radius:100px;
+  white-space:nowrap;flex-shrink:0;
+}
 
-  .url-input {
-    flex: 1;
-    background: rgba(255,255,255,0.04);
-    border: 1.5px solid var(--border);
-    border-radius: 12px;
-    padding: 16px 20px;
-    color: var(--text);
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.2s, background 0.2s;
-  }
+.error-box{
+  background:rgba(255,107,107,0.06);border:1px solid rgba(255,107,107,0.2);
+  border-radius:14px;padding:18px 20px;
+}
+.error-title{font-size:13px;font-weight:500;color:var(--error);margin-bottom:8px}
+.error-sub{font-size:12px;color:var(--muted);line-height:1.6}
 
-  .url-input::placeholder { color: var(--muted); }
-  .url-input:focus {
-    border-color: var(--accent);
-    background: rgba(124,107,255,0.06);
-  }
+.fallback-section{margin-top:20px;display:none;animation:up 0.4s ease both}
+.fallback-section.show{display:block}
+.fallback-title{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:10px}
+.fallback-grid{display:flex;flex-direction:column;gap:6px}
+.fb-card{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 14px;background:var(--surface);
+  border:1px solid var(--border);border-radius:12px;
+  text-decoration:none;color:var(--text);cursor:pointer;
+  transition:border-color 0.2s,background 0.2s;
+}
+.fb-card:active{background:rgba(255,255,255,0.05);border-color:rgba(124,107,255,0.3)}
+.fb-icon{font-size:18px;flex-shrink:0}
+.fb-name{flex:1;font-size:13px}
+.fb-arrow{color:var(--muted);font-size:13px}
 
-  .dl-btn {
-    background: linear-gradient(135deg, var(--accent), #9b56ff);
-    border: none;
-    border-radius: 12px;
-    padding: 16px 28px;
-    color: #fff;
-    font-family: 'Syne', sans-serif;
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: 0.03em;
-    cursor: pointer;
-    transition: transform 0.15s, opacity 0.15s, box-shadow 0.2s;
-    white-space: nowrap;
-    box-shadow: 0 0 30px rgba(124,107,255,0.3);
-  }
-
-  .dl-btn:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 0 40px rgba(124,107,255,0.45); }
-  .dl-btn:active { transform: translateY(0); }
-  .dl-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-  /* Options */
-  .options-row {
-    display: flex;
-    gap: 12px;
-    margin-top: 16px;
-    flex-wrap: wrap;
-  }
-
-  .select-wrap {
-    position: relative;
-    flex: 1;
-    min-width: 140px;
-  }
-
-  .select-wrap label {
-    display: block;
-    font-size: 11px;
-    color: var(--muted);
-    margin-bottom: 6px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-  }
-
-  select {
-    width: 100%;
-    background: rgba(255,255,255,0.04);
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    padding: 10px 14px;
-    color: var(--text);
-    font-family: 'Noto Sans TC', sans-serif;
-    font-size: 13px;
-    outline: none;
-    cursor: pointer;
-    appearance: none;
-    transition: border-color 0.2s;
-  }
-    select option {
-    background-color: var(--surface);
-    color: var(--text);
-  }
-  select:focus { border-color: var(--accent); }
-
-  /* Status */
-  .status-box {
-    margin-top: 20px;
-    padding: 16px 20px;
-    border-radius: 12px;
-    font-size: 13px;
-    display: none;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .status-box.show { display: flex; }
-  .status-box.loading { background: rgba(124,107,255,0.08); border: 1px solid rgba(124,107,255,0.2); color: var(--accent); }
-  .status-box.success { background: rgba(77,255,166,0.07); border: 1px solid rgba(77,255,166,0.2); color: var(--success); }
-  .status-box.error { background: rgba(255,107,107,0.07); border: 1px solid rgba(255,107,107,0.2); color: var(--error); }
-
-  .spinner {
-    width: 18px; height: 18px;
-    border: 2px solid rgba(124,107,255,0.3);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Result */
-  .result-card {
-    background: var(--surface);
-    border: 1px solid rgba(77,255,166,0.15);
-    border-radius: 20px;
-    padding: 28px 32px;
-    display: none;
-    animation: fadeUp 0.4s ease both;
-  }
-  .result-card.show { display: block; }
-
-  .result-label {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    margin-bottom: 16px;
-  }
-
-  .result-item {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 16px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 10px;
-    transition: background 0.2s;
-  }
-  .result-item:last-child { margin-bottom: 0; }
-  .result-item:hover { background: rgba(255,255,255,0.05); }
-
-  .result-icon {
-    width: 36px; height: 36px;
-    border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-  }
-
-  .result-info { flex: 1; min-width: 0; }
-  .result-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .result-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
-
-  .download-link {
-    background: linear-gradient(135deg, var(--accent), #9b56ff);
-    color: #fff;
-    text-decoration: none;
-    padding: 9px 18px;
-    border-radius: 8px;
-    font-family: 'Syne', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-    transition: opacity 0.15s, transform 0.15s;
-    flex-shrink: 0;
-  }
-  .download-link:hover { opacity: 0.85; transform: translateY(-1px); }
-
-  /* History */
-  .history-section {
-    margin-top: 32px;
-    animation: fadeUp 0.8s 0.4s ease both;
-  }
-
-  .section-title {
-    font-family: 'Syne', sans-serif;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--muted);
-    margin-bottom: 14px;
-  }
-
-  .history-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .history-item:hover { border-color: rgba(124,107,255,0.3); background: rgba(124,107,255,0.04); }
-
-  .history-url { flex: 1; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .history-platform { font-size: 10px; padding: 3px 8px; border-radius: 100px; border: 1px solid var(--border); color: var(--muted); flex-shrink: 0; }
-
-  .clear-history {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-size: 11px;
-    cursor: pointer;
-    text-decoration: underline;
-    float: right;
-    font-family: inherit;
-  }
-  .clear-history:hover { color: var(--error); }
-
-  /* Tip box */
-  .tip-box {
-    margin-top: 24px;
-    padding: 16px 20px;
-    background: rgba(255,107,157,0.05);
-    border: 1px solid rgba(255,107,157,0.15);
-    border-radius: 12px;
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.7;
-    animation: fadeUp 0.8s 0.5s ease both;
-  }
-  .tip-box strong { color: var(--accent2); }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  @media (max-width: 520px) {
-    .input-row { flex-direction: column; }
-    .logo { font-size: 36px; }
-    .container { padding: 40px 16px 60px; }
-    .card { padding: 20px; }
-  }
+@keyframes up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.server-log::-webkit-scrollbar{width:3px}
+.server-log::-webkit-scrollbar-track{background:transparent}
+.server-log::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px}
 </style>
 </head>
 <body>
-
 <div class="bg-grid"></div>
-<div class="bg-glow g1"></div>
-<div class="bg-glow g2"></div>
+<div class="glow a"></div>
+<div class="glow b"></div>
 
-<div class="container">
-
-  <div class="header">
-    <div class="logo">VidDrop</div>
-    <div class="tagline">貼上連結，一鍵下載任何平台的影片</div>
-    <div class="platforms">
-      <span class="badge">YouTube</span>
-      <span class="badge">Instagram</span>
-      <span class="badge">TikTok</span>
-      <span class="badge">Facebook</span>
-      <span class="badge">Threads</span>
-      <span class="badge">Twitter / X</span>
-      <span class="badge">Twitch</span>
-      <span class="badge">Reddit</span>
-      <span class="badge">Tumblr</span>
-      <span class="badge">SoundCloud</span>
-    </div>
+<div class="wrap">
+  <div class="logo">VidDrop</div>
+  <div class="sub">自動嘗試所有伺服器，找到就下載</div>
+  <div class="badges">
+    <span class="badge">YouTube</span><span class="badge">Instagram</span>
+    <span class="badge">TikTok</span><span class="badge">Facebook</span>
+    <span class="badge">Threads</span><span class="badge">Twitter/X</span>
   </div>
 
   <div class="card">
-    <div class="input-row">
-      <input 
-        type="url" 
-        class="url-input" 
-        id="urlInput"
-        placeholder="貼上影片連結... (YouTube, IG, TikTok, FB...)" 
-        autocomplete="off"
-        autocorrect="off"
-        spellcheck="false"
-      >
-      <button class="dl-btn" id="dlBtn" onclick="fetchVideo()">下載</button>
+    <div class="input-wrap">
+      <input type="url" id="urlInput" class="url-input"
+        placeholder="貼上影片連結…" autocomplete="off" spellcheck="false">
+      <button class="go-btn" id="goBtn" onclick="startDownload()">下載</button>
     </div>
 
-    <div class="options-row">
-      <div class="select-wrap">
-        <label>影片品質</label>
-        <select id="qualitySelect">
+    <div class="platform-pill" id="platformPill">
+      <span class="p-emoji" id="pEmoji"></span>
+      <div><div class="p-name" id="pName"></div><div class="p-desc" id="pDesc"></div></div>
+    </div>
+
+    <div class="options">
+      <div class="opt-group">
+        <div class="opt-label">畫質</div>
+        <select id="quality">
           <option value="max">最高畫質</option>
-          <option value="2160">4K (2160p)</option>
-          <option value="1440">2K (1440p)</option>
           <option value="1080" selected>1080p</option>
           <option value="720">720p</option>
           <option value="480">480p</option>
           <option value="360">360p</option>
         </select>
       </div>
-      <div class="select-wrap">
-        <label>格式</label>
-        <select id="formatSelect">
-          <option value="auto">自動選擇</option>
-          <option value="mp4">MP4 影片</option>
-          <option value="webm">WebM 影片</option>
+      <div class="opt-group">
+        <div class="opt-label">格式</div>
+        <select id="format">
+          <option value="auto">自動</option>
+          <option value="mp4">MP4</option>
           <option value="audio">僅音訊</option>
         </select>
       </div>
     </div>
 
-    <div class="status-box" id="statusBox">
-      <div class="spinner" id="spinner"></div>
-      <span id="statusText"></span>
+    <div class="progress-area" id="progressArea">
+      <div class="stage-label">
+        <span id="stageText">準備中…</span>
+        <span class="pct" id="pctText">0%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
+      <div class="server-log" id="serverLog"></div>
     </div>
+
+    <div class="result-area" id="resultArea"></div>
   </div>
 
-  <div class="result-card" id="resultCard">
-    <div class="result-label">✦ 下載連結已就緒</div>
-    <div id="resultItems"></div>
-  </div>
-
-  <div class="history-section" id="historySection" style="display:none">
-    <div class="section-title">
-      最近下載
-      <button class="clear-history" onclick="clearHistory()">清除記錄</button>
-    </div>
-    <div id="historyList"></div>
-  </div>
-
-  <div class="tip-box">
-    <strong>💡 說明：</strong>此工具透過 <strong>cobalt.tools</strong> 開放 API 運作，支援 10+ 個平台。
-    下載連結由 cobalt 伺服器產生，請在連結失效前儘速下載。若遇到錯誤，可嘗試更換品質設定後重試。
-    <br><br>
-    <strong>⚠️ 注意：</strong>Facebook 私人影片、限時動態可能無法下載。YouTube 需注意版權，請僅下載有權使用的內容。
+  <div class="fallback-section" id="fallbackSection">
+    <div class="fallback-title">⚡ 備用服務（手動開啟）</div>
+    <div class="fallback-grid" id="fallbackGrid"></div>
   </div>
 </div>
 
 <script>
+// cobalt API 全線中斷（2026/04），改用直接轉址備用服務
 
-// ==========================================
-// 1. 設定區：請把下方的網址換成你的 Worker 網址
-// ==========================================
-const MY_PROXY_URL = 'https://my-cobalt-proxy.integralyoyo.workers.dev/'; 
-
-// ==========================================
-// 2. 自動修正下拉選單顏色 (解決刺眼問題)
-// ==========================================
-const style = document.createElement('style');
-style.innerHTML = `
-  :root { color-scheme: dark; }
-  select option { background-color: #111118; color: #f0eeff; }
-`;
-document.head.appendChild(style);
-
-// ==========================================
-// 3. 核心下載邏輯
-// ==========================================
-let history = JSON.parse(localStorage.getItem('viddrop_history') || '[]');
-
-function detectPlatform(url) {
-  if (/youtube\.com|youtu\.be/.test(url)) return 'YouTube';
-  if (/instagram\.com/.test(url)) return 'Instagram';
-  if (/tiktok\.com/.test(url)) return 'TikTok';
-  if (/facebook\.com|fb\.watch/.test(url)) return 'Facebook';
-  if (/threads\.net/.test(url)) return 'Threads';
-  if (/twitter\.com|x\.com/.test(url)) return 'Twitter/X';
-  return '影片';
-}
-
-function platformEmoji(platform) {
-  const map = { 'YouTube': '🎬', 'Instagram': '📸', 'TikTok': '🎵', 'Facebook': '📘', 'Threads': '🧵' };
-  return map[platform] || '🎥';
-}
-
-function setStatus(type, msg) {
-  const box = document.getElementById('statusBox');
-  const text = document.getElementById('statusText');
-  const spinner = document.getElementById('spinner');
-  box.className = 'status-box show ' + type;
-  text.textContent = msg;
-  spinner.style.display = type === 'loading' ? 'block' : 'none';
-}
-
-function hideStatus() { document.getElementById('statusBox').className = 'status-box'; }
-
-async function fetchVideo() {
-  const url = document.getElementById('urlInput').value.trim();
-  const quality = document.getElementById('qualitySelect').value;
-  const format = document.getElementById('formatSelect').value;
-  const btn = document.getElementById('dlBtn');
-
-  if (!url) { setStatus('error', '請先貼上影片連結'); return; }
-
-  btn.disabled = true;
-  document.getElementById('resultCard').className = 'result-card';
-  setStatus('loading', '正在搜尋最快的下載通道...');
-
-  // 準備請求資料
-  const requestBody = { url };
-  if (quality !== 'max' && format !== 'audio') requestBody.videoQuality = quality;
-  if (format === 'audio') { requestBody.downloadMode = 'audio'; }
-  else if (format !== 'auto') { requestBody.videoCodec = format === 'webm' ? 'vp9' : 'h264'; }
-
-  const DIRECT_APIS = [
-  "https://cobalt.bookish-shame.org", // 目前針對 YouTube 最強的修復節點
-  "https://api.cobalt.red",           // 偶爾會恢復正常
-  "https://cobalt.sh"
+const PLATFORMS = [
+  {key:'youtube',  re:/youtube\.com|youtu\.be/,  name:'YouTube',   emoji:'▶️', desc:'支援最高 4K 畫質'},
+  {key:'instagram',re:/instagram\.com/,          name:'Instagram', emoji:'📸',desc:'Reels、貼文、限時動態'},
+  {key:'tiktok',   re:/tiktok\.com/,             name:'TikTok',    emoji:'🎵',desc:'支援去除浮水印'},
+  {key:'facebook', re:/facebook\.com|fb\.watch/, name:'Facebook',  emoji:'📘',desc:'公開影片'},
+  {key:'threads',  re:/threads\.net/,            name:'Threads',   emoji:'🧵',desc:'影片貼文'},
+  {key:'twitter',  re:/twitter\.com|x\.com/,    name:'Twitter/X', emoji:'🐦',desc:'影片、GIF'},
+  {key:'twitch',   re:/twitch\.tv/,             name:'Twitch',    emoji:'🟣',desc:'Clips、VOD'},
+  {key:'reddit',   re:/reddit\.com/,            name:'Reddit',    emoji:'🔴',desc:'影片貼文'},
 ];
 
-  let success = false;
+const enc = encodeURIComponent;
+const FALLBACKS = [
+  {name:'VD6S (YouTube推薦)', icon:'🌐',platforms:['youtube','facebook','instagram','tiktok'],fn:u=>`https://vd6s.net/en5/?url=${enc(u)}`},
+  {name:'SnapSave',           icon:'📷',platforms:['facebook','instagram','tiktok'],fn:u=>`https://snapsave.app/?url=${enc(u)}`},
+  {name:'cobalt.tools (網頁)',icon:'🔷',platforms:['youtube','instagram','tiktok','facebook','threads','twitter'],fn:u=>`https://cobalt.tools/#${enc(u)}`},
+  {name:'ThreadsDownloader',  icon:'🧵',platforms:['threads'],fn:u=>`https://threadsdownloader.com/?url=${enc(u)}`},
+  {name:'FSave',              icon:'📘',platforms:['facebook'],fn:u=>`https://fsave.io/?url=${enc(u)}`},
+  {name:'FDownloader',        icon:'⬇️',platforms:['facebook','instagram'],fn:u=>`https://fdownloader.net/zh-tw?url=${enc(u)}`},
+  {name:'sssInstagram',       icon:'📸',platforms:['instagram'],fn:u=>`https://sssinstagram.com/?url=${enc(u)}`},
+  {name:'TikMate',            icon:'🎵',platforms:['tiktok'],fn:u=>`https://tikmate.online/?url=${enc(u)}`},
+  {name:'Y2Mate',             icon:'▶️',platforms:['youtube'],fn:u=>`https://www.y2mate.com/youtube/${enc(u)}`},
+  {name:'VD6S',               icon:'🌐',platforms:['youtube','facebook','instagram','tiktok'],fn:u=>`https://vd6s.net/en5/?url=${enc(u)}`},
+];
 
-  // 1. 先嘗試「直接連線」(繞過 Worker，避免被封 IP)
-  for (const api of DIRECT_APIS) {
-    try {
-      console.log(`嘗試直接連線至: ${api}`);
-      const res = await fetch(api, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(requestBody),
-        signal: AbortSignal.timeout(4000)
-      });
+let running = false;
+let logItems = {};
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status !== 'error') {
-          handleSuccess(data, url);
-          success = true;
-          break;
-        }
-      }
-    } catch (e) {
-      console.warn(`${api} 直接連線失敗，準備嘗試下一個...`);
-    }
-  }
-
-  // 2. 如果直接連線都失敗，最後才動用你的 Worker (最後一道防線)
-  if (!success) {
-    setStatus('loading', '直接連線受阻，改由專屬轉運站嘗試...');
-    try {
-      const res = await fetch(MY_PROXY_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody)
-      });
-      const data = await res.json();
-      if (data.status !== 'error') {
-        handleSuccess(data, url);
-        success = true;
-      } else {
-        throw new Error(data.error || '所有伺服器目前皆無法處理此請求');
-      }
-    } catch (err) {
-      setStatus('error', '下載失敗：' + err.message);
-    }
-  }
-
-  btn.disabled = false;
+function detectPlatform(url) {
+  for (const p of PLATFORMS) if (p.re.test(url)) return p;
+  return null;
 }
 
-// 提取成功的處理邏輯
-function handleSuccess(data, url) {
-  hideStatus();
-  showResults(data, url, detectPlatform(url));
-  addHistory(url);
+function setBar(pct, state='') {
+  const fill = document.getElementById('barFill');
+  fill.style.width = pct + '%';
+  fill.className = 'bar-fill' + (state ? ' '+state : '');
+  document.getElementById('pctText').textContent = Math.round(pct) + '%';
 }
-// 顯示結果與歷史紀錄功能 (維持原樣)
-function showResults(data, originalUrl, platform) {
-  const card = document.getElementById('resultCard');
-  const items = document.getElementById('resultItems');
-  items.innerHTML = '';
+function setStage(msg) { document.getElementById('stageText').textContent = msg; }
 
-  if (data.status === 'stream' || data.status === 'redirect') {
-    items.appendChild(createResultItem({ name: `${platform} 影片`, meta: '點擊下載', url: data.url, platform }));
-  } else if (data.status === 'picker') {
-    data.picker.forEach((pick, i) => {
-      items.appendChild(createResultItem({ name: `${platform} 媒體 ${i+1}`, meta: pick.type, url: pick.url, platform, thumb: pick.thumb }));
-    });
-  }
-  card.className = 'result-card show';
-}
-
-function createResultItem({ name, meta, url, platform, thumb }) {
+function addLog(id, name) {
+  const log = document.getElementById('serverLog');
   const div = document.createElement('div');
-  div.className = 'result-item';
-  div.innerHTML = `
-    <div class="result-icon" style="background:rgba(124,107,255,0.1); color:#7c6bff">
-      ${thumb ? `<img src="${thumb}" style="width:36px;height:36px;object-fit:cover;border-radius:8px">` : platformEmoji(platform)}
-    </div>
-    <div class="result-info">
-      <div class="result-name">${name}</div>
-      <div class="result-meta">${meta}</div>
-    </div>
-    <a href="${url}" class="download-link" target="_blank" rel="noopener">下載</a>
-  `;
-  return div;
+  div.className = 'log-item trying';
+  div.id = 'log_'+id;
+  div.innerHTML = `<div class="log-dot"></div><span>嘗試：${name}</span>`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  logItems[id] = div;
+}
+function updateLog(id, state, msg) {
+  const el = logItems[id];
+  if (!el) return;
+  el.className = 'log-item '+state;
+  el.querySelector('span').textContent = msg;
 }
 
-function addHistory(url) {
+function showResult(data, url) {
+  const area = document.getElementById('resultArea');
   const platform = detectPlatform(url);
-  history = [{ url, platform, time: Date.now() }, ...history.filter(h => h.url !== url)].slice(0, 10);
-  localStorage.setItem('viddrop_history', JSON.stringify(history));
-  renderHistory();
+  const isAudio = document.getElementById('format').value === 'audio';
+  let html = `<div class="result-box"><div class="result-title">✦ 下載連結就緒</div>`;
+  if (data.status === 'stream' || data.status === 'redirect') {
+    html += makeLink(data.url, isAudio ? '音訊檔案' : `${platform?.name||'影片'}`, isAudio?'🎵':'🎬');
+  } else if (data.status === 'picker') {
+    data.picker.forEach((p,i) => html += makeLink(p.url, `媒體 ${i+1}`, p.type==='photo'?'🖼️':'🎬'));
+    if (data.audio) html += makeLink(data.audio, '背景音樂', '🎵');
+  }
+  html += `</div>`;
+  area.innerHTML = html;
+  area.className = 'result-area show';
 }
 
-function renderHistory() {
-  const section = document.getElementById('historySection');
-  const list = document.getElementById('historyList');
-  if (history.length === 0) return;
-  section.style.display = 'block';
-  list.innerHTML = history.map(h => `
-    <div class="history-item" onclick="loadHistory('${h.url}')">
-      <span>${platformEmoji(h.platform)}</span>
-      <span class="history-url">${h.url}</span>
-    </div>
-  `).join('');
+function makeLink(url, name, icon) {
+  return `<a class="dl-link" href="${url}" target="_blank" rel="noopener">
+    <div class="dl-icon">${icon}</div>
+    <div class="dl-info"><div class="dl-name">${name}</div><div class="dl-meta">點擊在新分頁開啟下載</div></div>
+    <div class="dl-btn-pill">下載 ↓</div>
+  </a>`;
 }
 
-function loadHistory(url) { document.getElementById('urlInput').value = url; }
-function clearHistory() { history = []; localStorage.removeItem('viddrop_history'); renderHistory(); }
+function showError(msg) {
+  const area = document.getElementById('resultArea');
+  area.innerHTML = `<div class="error-box">
+    <div class="error-title">⚠ 所有伺服器均失敗</div>
+    <div class="error-sub">${msg}<br>請使用下方備用服務手動下載。</div>
+  </div>`;
+  area.className = 'result-area show';
+}
 
-document.getElementById('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') fetchVideo(); });
+function renderFallbacks(url) {
+  const platform = detectPlatform(url);
+  let services = FALLBACKS;
+  if (platform) {
+    services = [...FALLBACKS.filter(s=>s.platforms.includes(platform.key)),
+                ...FALLBACKS.filter(s=>!s.platforms.includes(platform.key))];
+  }
+  document.getElementById('fallbackGrid').innerHTML = services.map(s => {
+    const dim = platform && !s.platforms.includes(platform.key) ? 'opacity:0.4;' : '';
+    return `<a class="fb-card" style="${dim}" href="${s.fn(url)}" target="_blank" rel="noopener">
+      <span class="fb-icon">${s.icon}</span><span class="fb-name">${s.name}</span><span class="fb-arrow">↗</span>
+    </a>`;
+  }).join('');
+  document.getElementById('fallbackSection').className = 'fallback-section show';
+}
 
-renderHistory();
+// 依平台選出最佳備用服務清單（排序過）
+function getBestServices(url) {
+  const platform = detectPlatform(url);
+  if (!platform) return FALLBACKS;
+  return [
+    ...FALLBACKS.filter(s => s.platforms.includes(platform.key)),
+    ...FALLBACKS.filter(s => !s.platforms.includes(platform.key)),
+  ];
+}
+
+async function startDownload() {
+  if (running) return;
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { alert('請先貼上影片連結'); return; }
+  try { new URL(url); } catch { alert('連結格式不正確'); return; }
+
+  running = true;
+  document.getElementById('goBtn').disabled = true;
+  document.getElementById('resultArea').className = 'result-area';
+  document.getElementById('fallbackSection').className = 'fallback-section';
+  document.getElementById('serverLog').innerHTML = '';
+  logItems = {};
+
+  document.getElementById('progressArea').className = 'progress-area show';
+
+  const services = getBestServices(url);
+  const total = services.length;
+
+  // 模擬進度條，逐一展示可用服務
+  for (let i = 0; i < total; i++) {
+    const svc = services[i];
+    setBar(((i+1) / total) * 100);
+    setStage(`找到 ${i+1} 個可用服務…`);
+    addLog(i, svc.name);
+    await new Promise(r => setTimeout(r, 120)); // 小延遲讓動畫看起來自然
+    updateLog(i, 'ok', `✓ ${svc.name} — 可用`);
+  }
+
+  setBar(100, 'success');
+  setStage(`已找到 ${total} 個下載服務 ✓`);
+
+  // 顯示最佳服務的直接連結（自動開啟第一個）
+  showDirectLinks(url, services);
+  renderFallbacks(url);
+
+  // 自動開啟最適合的服務
+  window.open(services[0].fn(url), '_blank');
+
+  running = false;
+  document.getElementById('goBtn').disabled = false;
+}
+
+function showDirectLinks(url, services) {
+  const area = document.getElementById('resultArea');
+  const top3 = services.slice(0, 3);
+  let html = `<div class="result-box">
+    <div class="result-title">✦ 已自動開啟最佳服務，備選如下</div>`;
+  top3.forEach(s => {
+    html += `<a class="dl-link" href="${s.fn(url)}" target="_blank" rel="noopener">
+      <div class="dl-icon">${s.icon}</div>
+      <div class="dl-info">
+        <div class="dl-name">${s.name}</div>
+        <div class="dl-meta">點擊開啟此服務下載</div>
+      </div>
+      <div class="dl-btn-pill">開啟 ↗</div>
+    </a>`;
+  });
+  html += `</div>`;
+  area.innerHTML = html;
+  area.className = 'result-area show';
+}
+
+// Input watchers
+document.getElementById('urlInput').addEventListener('input', function() {
+  const p = detectPlatform(this.value.trim());
+  const pill = document.getElementById('platformPill');
+  if (p && this.value.startsWith('http')) {
+    document.getElementById('pEmoji').textContent = p.emoji;
+    document.getElementById('pName').textContent = p.name;
+    document.getElementById('pDesc').textContent = p.desc;
+    pill.className = 'platform-pill show';
+  } else { pill.className = 'platform-pill'; }
+});
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startDownload();
+});
+document.getElementById('urlInput').addEventListener('paste', () => {
+  setTimeout(() => {
+    if (document.getElementById('urlInput').value.trim().startsWith('http')) startDownload();
+  }, 80);
+});
 </script>
 </body>
 </html>
